@@ -4,82 +4,107 @@ B,C,D,E заполняется случайным образом целыми ч
 Для отладки использовать не случайное заполнение, а целенаправленное. Вид матрицы А:
 E B
 C D
-Формируется матрица F следующим образом:
-скопировать в нее А и  если в Е максимальный элемент в нечетных столбцах больше, чем сумма чисел в нечетных строках,
-то поменять местами С и В симметрично, иначе В и Е поменять местами несимметрично. При этом матрица А не меняется.
-После чего если определитель матрицы А больше суммы диагональных элементов матрицы F, то вычисляется выражение: A-1*AT – K * F-1,
-иначе вычисляется выражение (AТ +G-FТ)*K, где G-нижняя треугольная матрица, полученная из А.
+Вариант 14.	Формируется матрица F следующим образом: скопировать в нее А и если в В количество чисел, меньших К в нечетных столбцах больше, чем сумма чисел в четных строках, то поменять местами С и Е симметрично, иначе В и Е поменять местами несимметрично. 
+При этом матрица А не меняется. После чего если определитель матрицы А больше суммы диагональных элементов матрицы F,то вычисляется выражение: A-1*AT – K * F, иначе вычисляется выражение (A-1 +G-FТ)*K, где G-нижняя треугольная матрица, полученная из А.
 Выводятся по мере формирования А, F и все матричные операции последовательно.
 '''
+
 import numpy as np
 import matplotlib.pyplot as plt
 
-K = int(input('Введите K: '))
-while True:
-    N = int(input('Введите N: '))
-    if N % 2 ==0 and N >= 6:
-        break
+def generate_matrix(N):
+    A = np.zeros((N, N))  
+    for i in range(N):
+        for j in range(N):
+            if i >= N // 2 and j < N // 2:
+                A[i, j] = np.random.randint(-10, 10)  # Подматрица B
+            elif i >= N // 2 and j >= N // 2:
+                A[i, j] = np.random.randint(-10, 10)  # Подматрица C
+            elif i < N // 2 and j >= N // 2:
+                A[i, j] = np.random.randint(-10, 10)  # Подматрица D
+            else:
+                A[i, j] = np.random.randint(-10, 10)  # Подматрица E
+    return A
+
+def form_matrix_F(A, K):
+    N = A.shape[0]
+    F = A.copy()
+
+    # Разделение матрицы A на подматрицы B, C, D, E
+    B = A[:N//2, N//2:]
+    C = A[N//2:, N//2:]
+    D = A[N//2:, :N//2]
+    E = A[:N//2, :N//2]
+
+    count_B_less_K = np.sum(B[:, 1::2] < K)
+    sum_B_even_rows = np.sum(B[::2, :])
+
+    if count_B_less_K > sum_B_even_rows:
+     
+        F[:N//2, :N//2] = np.flipud(C)
+        F[N//2:, N//2:] = np.flipud(E)
     else:
-        print('Матрица должна быть четной и больше 6', '\n')
+        #
+        F[:N//2, N//2:] = E
+        F[:N//2, :N//2] = B
 
-A = np.random.randint(-10, 11, (N, N))
-E = A[:N//2, :N//2]
-B = A[:N//2, N//2:]
-D = A[N//2:, :N//2]
-C = A[N//2:, N//2:]
+    return F
 
-F = np.copy(A)
-print("Матрица A:\n", A, '\n')
-max_E = -100
-for i in range(len(E)):
-    for j in range(len(E)):
-        if j % 2 != 0:
-            max_E = max(max_E, E[i][j])
-print("Максимальный элемент:", max_E, '\n')
+def compute_operations(A, F, K):
+    det_A = np.linalg.det(A)
+    sum_diag_F = np.trace(F)
 
-sum_E = 0
-for i in range(len(E)):
-    for j in range(len(E)):
-        if i % 2 != 0:
-            sum_E += E[i][j]
-print("Сумма элементов:", sum_E, '\n')
+    if det_A > sum_diag_F:
+        result = np.linalg.inv(A) @ A.T - K * F
+    else:
+        G = np.tril(A)
+        result = (np.linalg.inv(A) + G - F.T) * K
 
-if max_E > sum_E:
-    F[:N // 2, :N // 2], F[N // 2:, N // 2:] = F[N // 2:, N // 2:], F[:N // 2, :N // 2]
-else:
-    F[:N//2, N//2:], F[N//2:, :N//2] = F[N//2:, :N//2], F[:N//2, N//2:]
+    return result
 
-det_A = np.linalg.det(A)
-print("Определитель матрицы A: ", det_A, '\n')
-sum_diag_F = np.sum(np.diag(F))
-print("Сумма диагоналей матрицы F: ", sum_diag_F, '\n')
-G = np.tril(A)
-print("Нижняя треугольная матрица G:\n", G, '\n')
-if det_A > sum_diag_F:
-    result = (np.linalg.inv(A) * np.transpose(A)) - (K * np.linalg.inv(F))
-else:
-    result = (np.transpose(A) + G - np.transpose(F))*K #answer = ((np.linalg.inv(a) + g) - np.transpose(f) * k)
-print("Результат вычислений:\n", result, '\n')
+# Построение графиков
+def plot_matrices(A, F, result):
+    plt.figure(figsize=(15, 5))
 
-for i in range(N):
-    plt.plot(F[i], label=f'Row {i + 1}')
-plt.legend()
-plt.title('Графики данных из матрицы F')
-plt.xlabel('Столбцы')
-plt.ylabel('Значения')
-plt.show()
+    # График 1: Матрица A
+    plt.subplot(1, 3, 1)
+    plt.imshow(A, cmap='viridis')
+    plt.title('Matrix A')
+    plt.colorbar()
+
+    # График 2: Матрица F
+    plt.subplot(1, 3, 2)
+    plt.imshow(F, cmap='viridis')
+    plt.title('Matrix F')
+    plt.colorbar()
+
+    # График 3: Результат матричных операций
+    plt.subplot(1, 3, 3)
+    plt.imshow(result, cmap='viridis')
+    plt.title('Result of Matrix Operations')
+    plt.colorbar()
+
+    plt.tight_layout()
+    plt.show()
+
+# Основная функция
+def main():
+    K = int(input("Введите число K: "))
+    N = int(input("Введите размер матрицы N: "))
+
+    A = generate_matrix(N)
+    print("\nМатрица A:\n", A)
+    plot_matrices(A, A, A)  
+
+    F = form_matrix_F(A, K)
+    print("\nМатрица F:\n", F)
+    plot_matrices(A, F, F)  
+
+    result = compute_operations(A, F, K)
+    print("\nРезультат матричных операций:\n", result)
+    plot_matrices(A, F, result) 
+
+if __name__ == "__main__":
+    main()
 
 
-plt.title("Высота столбца от числа элемента первой строки")
-plt.xlabel("x")
-plt.ylabel("y")
-plt.grid()
-plt.bar(range(0,N),F[0],color='r',alpha=0.9)
-
-plt.show()
-
-
-plt.plot(sum_diag_F, marker='s')
-plt.title("График суммы диагональных элементов матрицы F")
-plt.grid(True)
-plt.show()
