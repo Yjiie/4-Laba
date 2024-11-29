@@ -13,98 +13,91 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 def generate_matrix(N):
-    A = np.zeros((N, N))  
+    A = np.zeros((N, N))
     for i in range(N):
         for j in range(N):
             if i >= N // 2 and j < N // 2:
-                A[i, j] = np.random.randint(-10, 10)  # Подматрица B
+                A[i, j] = np.random.randint(-10, 10)
             elif i >= N // 2 and j >= N // 2:
-                A[i, j] = np.random.randint(-10, 10)  # Подматрица C
+                A[i, j] = np.random.randint(-10, 10)
             elif i < N // 2 and j >= N // 2:
-                A[i, j] = np.random.randint(-10, 10)  # Подматрица D
+                A[i, j] = np.random.randint(-10, 10)
             else:
-                A[i, j] = np.random.randint(-10, 10)  # Подматрица E
+                A[i, j] = np.random.randint(-10, 10)
     return A
 
 def form_matrix_F(A, K):
     N = A.shape[0]
     F = A.copy()
-
-    # Разделение матрицы A на подматрицы B, C, D, E
     B = A[:N//2, N//2:]
     C = A[N//2:, N//2:]
     D = A[N//2:, :N//2]
     E = A[:N//2, :N//2]
-
     count_B_less_K = np.sum(B[:, 1::2] < K)
     sum_B_even_rows = np.sum(B[::2, :])
-
     if count_B_less_K > sum_B_even_rows:
-     
         F[:N//2, :N//2] = np.flipud(C)
         F[N//2:, N//2:] = np.flipud(E)
     else:
-        #
         F[:N//2, N//2:] = E
         F[:N//2, :N//2] = B
-
     return F
 
 def compute_operations(A, F, K):
     det_A = np.linalg.det(A)
     sum_diag_F = np.trace(F)
-
     if det_A > sum_diag_F:
         result = np.linalg.inv(A) @ A.T - K * F
     else:
         G = np.tril(A)
         result = (np.linalg.inv(A) + G - F.T) * K
-
     return result
 
-# Построение графиков
+def print_matrix(matrix, name="Matrix"):
+    formatted_matrix = np.array2string(
+        matrix, 
+        formatter={'float_kind': lambda x: f"{x:8.2f}"},
+        max_line_width=100
+    )
+    print(f"\n{name}:\n{formatted_matrix}")
+
 def plot_matrices(A, F, result):
-    plt.figure(figsize=(15, 5))
-
-    # График 1: Матрица A
-    plt.subplot(1, 3, 1)
+    plt.figure(figsize=(15, 10))
+    plt.subplot(2, 2, 1)
     plt.imshow(A, cmap='viridis')
-    plt.title('Matrix A')
+    plt.title('Matrix A (Heatmap)')
     plt.colorbar()
-
-    # График 2: Матрица F
-    plt.subplot(1, 3, 2)
-    plt.imshow(F, cmap='viridis')
-    plt.title('Matrix F')
-    plt.colorbar()
-
-    # График 3: Результат матричных операций
-    plt.subplot(1, 3, 3)
-    plt.imshow(result, cmap='viridis')
-    plt.title('Result of Matrix Operations')
-    plt.colorbar()
-
+    plt.subplot(2, 2, 2)
+    unique, counts = np.unique(F > 0, return_counts=True)
+    labels = ['Positive', 'Negative or Zero']
+    sizes = [counts[1], counts[0]]
+    plt.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=140, colors=['#4CAF50', '#FFC107'])
+    plt.title('Matrix F (Positive Elements)')
+    plt.subplot(2, 2, 3)
+    plt.hist(result.flatten(), bins=20, color='skyblue', edgecolor='black')
+    plt.title('Result Matrix (Histogram)')
+    plt.xlabel('Value')
+    plt.ylabel('Frequency')
     plt.tight_layout()
     plt.show()
 
-# Основная функция
 def main():
     K = int(input("Введите число K: "))
-    N = int(input("Введите размер матрицы N: "))
+    N = int(input("Введите размер матрицы N (четное число): "))
+    if N % 2 != 0:
+        print("Ошибка: размер матрицы N должен быть четным!")
+        return
 
     A = generate_matrix(N)
-    print("\nМатрица A:\n", A)
-    plot_matrices(A, A, A)  
-
+    print_matrix(A, name="Матрица A")
     F = form_matrix_F(A, K)
-    print("\nМатрица F:\n", F)
-    plot_matrices(A, F, F)  
-
+    print_matrix(F, name="Матрица F")
     result = compute_operations(A, F, K)
-    print("\nРезультат матричных операций:\n", result)
-    plot_matrices(A, F, result) 
+    print_matrix(result, name="Результат матричных операций")
+    plot_matrices(A, F, result)
 
 if __name__ == "__main__":
     main()
+
 
 
